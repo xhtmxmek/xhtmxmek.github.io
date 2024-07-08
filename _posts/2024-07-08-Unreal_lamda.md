@@ -11,7 +11,7 @@ tags: [TAG]		# TAG는 반드시 소문자로 이루어져야함!
 
     람다 표현식은 기본적으로 함수의 형태를 띄지만 함수의 이름은 존재하지 않고 시그니처(리턴 값과 파라메터 등)만 존재하는 함수식이다. 기본 표현 방법은 다음과 같다. 
     
-    _**\[capture\](paratmeter)->returnType{statement}(argument)**_
+    **_\[capture\](paratmeter)->returnType{statement}(argument)_**
     
     각 항목에 대한 설명은 다음과 같다.
 
@@ -33,7 +33,7 @@ tags: [TAG]		# TAG는 반드시 소문자로 이루어져야함!
     ```c++
     auto f = [&](int x, int y) { return fudgeFactor * (x + y); };
     ```    
-
+    
     해당 식에서 우측의 람다식을 통해서 클로저 객체가 생성이 되고, 이 객체는 f에 카피된다. 생성된 클로저 객체는 라인의 끝에서 소멸된다. 람다와 클로저의 차이는 클래스와 클래스 인스턴스의 차이라고 보면 된다.
 
 
