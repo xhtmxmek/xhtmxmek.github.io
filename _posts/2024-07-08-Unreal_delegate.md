@@ -44,4 +44,4 @@ A객체의 멤버함수를 바인딩 후, A 객체가 삭제될시 IsBound() 체
 
 액세스 위반이 발생하는 것을 확인했다. 쓰레기 값을 호출하기 떄문일 것이다.
 
-참고: [ue4_delegate예시](https://darkcatgame.tistory.com/66), [ue4_delegate 바인드 종류](https://darkcatgame.tistory.com/66)
+참고: [ue4_delegate예시](https://darkcatgame.tistory.com/66), [ue4_delegate 바인드 종류](https://www.devoops.kr/5)
