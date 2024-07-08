@@ -37,6 +37,7 @@ tags: [TAG]		# TAG는 반드시 소문자로 이루어져야함!
 
 
 * c#
+
     * 식이 본문으로 포함된 람다 : **(input-parameters) => expression**
     * 문장 블록이 본문으로 포함된 람다 : **input-parameters => { /* */ }**
 
@@ -46,8 +47,9 @@ tags: [TAG]		# TAG는 반드시 소문자로 이루어져야함!
 
 
 * _Java의 람다_
-    * 기본 문법 : **(parameter) -> statement**
-    * c++과의 차이점
 
+    * 기본 문법 : **(parameter) -> statement**
+    
+    * c++과의 차이점
         * 지역변수를 캡처한다면 final(c++로 치면 const)로 사용해야 한다.
         * final로 선언되어 있지 않다고 하더라도 캡처 하는 값의 재할당이 일어나면 안됨.
