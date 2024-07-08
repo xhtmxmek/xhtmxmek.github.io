@@ -35,8 +35,8 @@ tags: [TAG]		# TAG는 반드시 소문자로 이루어져야함!
 
 * blueprint
     * Cast To node를 통해 형변환이 가능하다. 기본적으로 언리얼 c++ 처럼 상속구조상 유효한 타입만을 형변환 할 수 있다.    
-
-  ![BP_EventGraph](/assets/img/bp_eventGraph_for_Cast.png)
+	
+	![BP_EventGraph](/assets/img/bp_eventGraph_for_Cast.png)
 
 ## **언리얼 엔진은 C++ 기본 RTTI 사용하는지? 사용하지 않는다면 왜 그런가?**
 
