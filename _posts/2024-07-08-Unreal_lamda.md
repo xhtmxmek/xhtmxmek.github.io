@@ -8,7 +8,6 @@ tags: [TAG]		# TAG는 반드시 소문자로 이루어져야함!
 ## **lambda,closure, capture에 대해 설명하라. (c++과 다른 언어 비교 설명)**
 
 * c++
-
     람다 표현식은 기본적으로 함수의 형태를 띄지만 함수의 이름은 존재하지 않고 시그니처(리턴 값과 파라메터 등)만 존재하는 함수식이다. 기본 표현 방법은 다음과 같다. 
     
     ***\[capture\](paratmeter)->returnType{statement}(argument)***
@@ -38,17 +37,15 @@ tags: [TAG]		# TAG는 반드시 소문자로 이루어져야함!
 
 
 * c#
-
-    * 식이 본문으로 포함된 람다 : **(input-parameters) => expression**
-    * 문장 블록이 본문으로 포함된 람다 : **input-parameters => { /* */ }**
+    * 식이 본문으로 포함된 람다 : ***(input-parameters) => expression***
+    * 문장 블록이 본문으로 포함된 람다 : ***input-parameters => { /* */ }***
     * c++과의 차이점
         * 캡처 형식 따로 명시 해줄 필요 없음. 람다의 대리자가 가비지 컬렉션에 수집될때까지 캡처 변수 값은 가비지 컬렉션안됨
         * 리턴 타입 명시할 필요 없음
 
 
-* _Java의 람다_
-
-    * 기본 문법 : **(parameter) -> statement**
+* Java의 람다
+    * 기본 문법 : ***(parameter) -> statement***
     * c++과의 차이점
         * 지역변수를 캡처한다면 final(c++로 치면 const)로 사용해야 한다.
         * final로 선언되어 있지 않다고 하더라도 캡처 하는 값의 재할당이 일어나면 안됨.
