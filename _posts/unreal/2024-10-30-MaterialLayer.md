@@ -10,14 +10,16 @@ tags: [TAG]		# TAG는 반드시 소문자로 이루어져야함!
 ## 개요
 
 **레이어드 머티리얼(Layered Materials)** 은 일련의 서브 머티리얼(레이어)이 포함된 머티리얼을 만든 다음 마스크와 같은 픽셀당 연산으로 오브젝트의 표면에 배치할 수 있다. 표면의 복잡한 블렌딩을 처리하는데 적합.
+
 아래 이미지에서 가장 오른쪽의 로켓은 크롬, 알류미늄, 구리 부분에 별도의 레이어를 사용했음. 머티리얼에서 픽셀 단위로 블렌딩. 왼쪽 세개는 레이어 없이 단일 재질.
 
-![layeredMaterial](/assets/img/layerdmaterials.png)
+![layeredMaterial](/assets/img/layeredmaterials.png)
 
 레이어드 머티리얼 기능은 머티리얼 함수의 확장. 머티리얼 함수 내에서 **Make Material Attruibutes**와 **Break Material Attribute** 노드를 사용하여 출력. 
 베이스 머티리얼에서 이 함수를 호출하여 레이어 블렌드 사용하여 블렌딩.
 
 ![Chrom_Layer_function](/assets/img/chrome-layer-function.png)
+
 위 이미지처럼 머티리얼 함수 내에서 Make Material Attribute를 사용하여 출력하고, 블렌드 머티리얼에서 레이어로 사용하여 다른 레이어(머티리얼 함수)와 블렌드 가능.
 
 작업 프로세스는 다음과 같다.
@@ -28,9 +30,12 @@ tags: [TAG]		# TAG는 반드시 소문자로 이루어져야함!
 
 ## 주요 장점 
 레이어나 함수 없이 기존 머티리얼 그래프로도 레이어드 머티리얼 효과를 낼 수 있지만, 노드 네트워크가 복잡해지게 된다.
-![withoutLayerdMateiral](/assets/img/before_layerd_material.jpg)
+
+![withoutLayerdMateiral](/assets/img/before_layered_material.jpg)
+
 반면 레이어드 머티리얼을 사용하면 블렌딩이 쉬워지고 아티스트의 수정과 디버깅도 간편해진다.
-![LayerdMateiral](/assets/img/after_layerd_material.jpg)
+
+![LayerdMateiral](/assets/img/after_layered_material.jpg)
 
 레이어드 머티리얼의 또 다른 장점은 머티리얼 함수를 사용하므로 각 레이어를 재사용 할 수 있다. 표면을 정의하는 일종의 라이브러리 세트를 다양하게 조합해서 만들어 놓을 수 있다.
 
@@ -45,7 +50,7 @@ tags: [TAG]		# TAG는 반드시 소문자로 이루어져야함!
 ## 레이어드 머티리얼 인스턴싱하기
 인스턴싱을 위해 머티리얼을 파라미터화 하려면 **함수 입력(Function Input)** 표현식을 만들고 상위 머티리얼에서 이 입력에 파라미터를 연결함.
 
-![LayerdMateiralParam](/assets/img/LayerdMatParamDiagram.png)
+![LayerdMateiralParam](/assets/img/LayeredMatParamDiagram.png)
 
 1. **머티리얼 파라미터(스칼라 파라미터, 벡터 파라미터)**
 2. **머티리얼 레이어(함수)**
