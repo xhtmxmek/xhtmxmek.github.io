@@ -50,7 +50,7 @@ tags: [TAG]		# TAG는 반드시 소문자로 이루어져야함!
 ## 레이어드 머티리얼 인스턴싱하기
 인스턴싱을 위해 머티리얼을 파라미터화 하려면 **함수 입력(Function Input)** 표현식을 만들고 상위 머티리얼에서 이 입력에 파라미터를 연결함.
 
-![LayerdMateiralParam](/assets/img/LayeredMatParamDiagram.png)
+![LayerdMateiralParam](/assets/img/layeredmatparamdiagram.png)
 
 1. **머티리얼 파라미터(스칼라 파라미터, 벡터 파라미터)**
 2. **머티리얼 레이어(함수)**
