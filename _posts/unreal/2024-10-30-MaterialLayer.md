@@ -1,8 +1,8 @@
 ---
 title: 레이어드 머티리얼
-#date: 2024-10-30 15:02:00 +0800
+#date: 2024-11-04 15:02:00 +0800
 categories: [Unreal Engine, material]
-tags: [TAG]		# TAG는 반드시 소문자로 이루어져야함!
+tags: [머티리얼]		# TAG는 반드시 소문자로 이루어져야함!
 ---
 
 참고: [ue5 레이어드 머티리얼](https://dev.epicgames.com/documentation/ko-kr/unreal-engine/layered-materials-in-unreal-engine)
