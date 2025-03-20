@@ -1,5 +1,5 @@
 ---
-title: RealTimeRendering
+title: 변환환
 #date: 2024-10-02 14:51:00 +0800
 categories: [Graphics_3D, Real Time Rendering]
 tags: [TAG]		# TAG는 반드시 소문자로 이루어져야함!
