@@ -14,6 +14,55 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+function jitter(ms) {
+  const j = Math.random() * 0.25 + 0.875; // 0.875~1.125
+  return Math.floor(ms * j);
+}
+
+function extractJsonObject(text) {
+  const raw = (text ?? "").toString().trim();
+  if (!raw) throw new Error("모델 응답이 비었습니다.");
+
+  // 1) 그대로 JSON 시도
+  try {
+    return JSON.parse(raw);
+  } catch (_) {
+    // continue
+  }
+
+  // 2) ```json ... ``` 코드펜스 제거
+  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenced?.[1]) {
+    try {
+      return JSON.parse(fenced[1].trim());
+    } catch (_) {
+      // continue
+    }
+  }
+
+  // 3) 첫 { ~ 마지막 } 범위를 JSON으로 파싱 (설명/문구가 섞여도 최대한 복구)
+  const first = raw.indexOf("{");
+  const last = raw.lastIndexOf("}");
+  if (first >= 0 && last > first) {
+    const slice = raw.slice(first, last + 1);
+    return JSON.parse(slice);
+  }
+
+  throw new Error("모델 응답에서 JSON 객체를 찾지 못했습니다.");
+}
+
+async function fetchJson(url, init) {
+  const resp = await fetch(url, init);
+  const text = await resp.text().catch(() => "");
+  let json = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch (_) {
+    // non-json
+  }
+  return { resp, text, json };
+}
+
 /**
  * Translate an array of strings to target language, returning same-length array.
  * Uses OpenAI Chat Completions (simple + widely supported).
@@ -37,49 +86,81 @@ async function translateBatch({ apiKey, model, targetLang, texts }) {
     "Input list:\n" +
     JSON.stringify(nonEmpty.map((x) => x.t));
 
-  const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user }
-      ]
-    })
-  });
+  const body = {
+    model,
+    temperature: 0.2,
+    // 가능하면 JSON 강제(지원 모델/계정에서만 동작). 미지원이면 아래에서 에러 메시지로 확인 가능.
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user }
+    ]
+  };
 
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => "");
-    throw new Error(`OpenAI API 오류: ${resp.status} ${resp.statusText}\n${text}`);
+  let lastErr = null;
+  const maxAttempts = 5;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const { resp, text, json } = await fetchJson("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!resp.ok) {
+        const apiMsg = json?.error?.message || "";
+        const statusLine = `${resp.status} ${resp.statusText}`.trim();
+        const detail = apiMsg || text || "";
+
+        // 재시도 대상: 429, 5xx
+        if (resp.status === 429 || (resp.status >= 500 && resp.status <= 599)) {
+          const wait = jitter(500 * Math.pow(2, attempt - 1));
+          lastErr = new Error(`OpenAI API 오류(재시도 ${attempt}/${maxAttempts}): ${statusLine}\n${detail}`);
+          await sleep(wait);
+          continue;
+        }
+        throw new Error(`OpenAI API 오류: ${statusLine}\n${detail}`);
+      }
+
+      const data = json || {};
+      const content = data?.choices?.[0]?.message?.content ?? "";
+
+      let parsed;
+      try {
+        parsed = extractJsonObject(content);
+      } catch (e) {
+        throw new Error(
+          "번역 결과(JSON) 파싱 실패.\n" +
+            (e?.message || String(e)) +
+            "\n--- 모델 응답 앞부분 ---\n" +
+            content.slice(0, 500)
+        );
+      }
+
+      const translations = parsed?.translations;
+      if (!Array.isArray(translations) || translations.length !== nonEmpty.length) {
+        throw new Error("번역 결과 형식이 올바르지 않습니다. (translations 배열 길이 불일치)");
+      }
+
+      const out = texts.map(() => "");
+      nonEmpty.forEach((x, idx) => {
+        out[x.i] = (translations[idx] ?? "").toString();
+      });
+      return out;
+    } catch (e) {
+      // 네트워크/파싱 등도 1~2회 정도는 재시도
+      lastErr = e;
+      if (attempt < maxAttempts) {
+        await sleep(jitter(400 * Math.pow(2, attempt - 1)));
+        continue;
+      }
+    }
   }
 
-  const data = await resp.json();
-  const content = data?.choices?.[0]?.message?.content ?? "";
-
-  let parsed;
-  try {
-    parsed = JSON.parse(content);
-  } catch (e) {
-    throw new Error(
-      "번역 결과(JSON) 파싱 실패. 모델 응답이 JSON만 반환하지 않았습니다.\n" +
-        content.slice(0, 500)
-    );
-  }
-  const translations = parsed?.translations;
-  if (!Array.isArray(translations) || translations.length !== nonEmpty.length) {
-    throw new Error("번역 결과 형식이 올바르지 않습니다.");
-  }
-
-  const out = texts.map(() => "");
-  nonEmpty.forEach((x, idx) => {
-    out[x.i] = (translations[idx] ?? "").toString();
-  });
-  return out;
+  throw lastErr || new Error("번역 실패(원인 불명)");
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {

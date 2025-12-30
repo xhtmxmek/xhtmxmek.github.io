@@ -332,7 +332,7 @@ function stopAll() {
   state.running = false;
   setButtonRunning(false);
   setMeta("중지됨");
-  setError("");
+  // 에러 원인 파악을 위해 error는 지우지 않음
 }
 
 async function onStartClicked() {
