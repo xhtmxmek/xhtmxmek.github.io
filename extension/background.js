@@ -78,13 +78,18 @@ async function translateBatch({ apiKey, model, targetLang, texts }) {
     "Translate faithfully and naturally. " +
     "Do NOT add explanations. Do NOT merge lines. Keep meaning and tone.";
 
+  const items = nonEmpty.map((x) => ({ id: x.i, text: x.t }));
+
   const user =
     `Target language: ${targetLang}\n` +
     "Return ONLY valid JSON with this exact shape:\n" +
-    '{ "translations": ["...", "..."] }\n' +
-    "The translations array must have the same length and order as the input list.\n\n" +
-    "Input list:\n" +
-    JSON.stringify(nonEmpty.map((x) => x.t));
+    '{ "translations": [{ "id": 0, "text": "..." }] }\n' +
+    "Rules:\n" +
+    "- Keep line breaks (\\n) if they exist in the source text.\n" +
+    "- Do NOT merge items. Translate each item independently.\n" +
+    "- The output must include EXACTLY one object per input item, with the same id.\n\n" +
+    "Input items:\n" +
+    JSON.stringify(items);
 
   const body = {
     model,
@@ -96,6 +101,57 @@ async function translateBatch({ apiKey, model, targetLang, texts }) {
       { role: "user", content: user }
     ]
   };
+
+  async function translateSingleText(text) {
+    const singleBody = {
+      model,
+      temperature: 0.2,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a professional subtitle translator. Translate faithfully and naturally. " +
+            "Return ONLY valid JSON."
+        },
+        {
+          role: "user",
+          content:
+            `Target language: ${targetLang}\n` +
+            'Return ONLY this JSON shape: { "translation": "..." }\n' +
+            "Text:\n" +
+            JSON.stringify(text)
+        }
+      ]
+    };
+    const { resp, text: raw, json } = await fetchJson("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(singleBody)
+    });
+    if (!resp.ok) {
+      const apiMsg = json?.error?.message || "";
+      const statusLine = `${resp.status} ${resp.statusText}`.trim();
+      throw new Error(`OpenAI API 오류(단건): ${statusLine}\n${apiMsg || raw || ""}`);
+    }
+    const data = json || {};
+    const content = data?.choices?.[0]?.message?.content ?? "";
+    const parsed = extractJsonObject(content);
+    return (parsed?.translation ?? "").toString();
+  }
+
+  function mapById(translations) {
+    const m = new Map();
+    for (const it of translations) {
+      const id = Number(it?.id);
+      const txt = (it?.text ?? "").toString();
+      if (Number.isFinite(id)) m.set(id, txt);
+    }
+    return m;
+  }
 
   let lastErr = null;
   const maxAttempts = 5;
@@ -141,13 +197,21 @@ async function translateBatch({ apiKey, model, targetLang, texts }) {
       }
 
       const translations = parsed?.translations;
-      if (!Array.isArray(translations) || translations.length !== nonEmpty.length) {
-        throw new Error("번역 결과 형식이 올바르지 않습니다. (translations 배열 길이 불일치)");
+      if (!Array.isArray(translations)) {
+        throw new Error("번역 결과 형식이 올바르지 않습니다. (translations 배열 없음)");
+      }
+      const byId = mapById(translations);
+      const missing = nonEmpty.filter((x) => !byId.has(x.i)).map((x) => x.i);
+      if (missing.length) {
+        throw new Error(
+          "번역 결과 형식이 올바르지 않습니다. (translations id 누락)\n" +
+            `누락 id: ${missing.slice(0, 20).join(", ")}${missing.length > 20 ? "..." : ""}`
+        );
       }
 
       const out = texts.map(() => "");
-      nonEmpty.forEach((x, idx) => {
-        out[x.i] = (translations[idx] ?? "").toString();
+      nonEmpty.forEach((x) => {
+        out[x.i] = (byId.get(x.i) ?? "").toString();
       });
       return out;
     } catch (e) {
@@ -160,7 +224,17 @@ async function translateBatch({ apiKey, model, targetLang, texts }) {
     }
   }
 
-  throw lastErr || new Error("번역 실패(원인 불명)");
+  // 최종 폴백: 단건 번역으로 끝까지 진행(비용/속도는 느리지만, 멈추지 않게)
+  try {
+    const out = texts.map(() => "");
+    for (const x of nonEmpty) {
+      out[x.i] = await translateSingleText(x.t);
+      await sleep(jitter(120));
+    }
+    return out;
+  } catch (e) {
+    throw lastErr || e || new Error("번역 실패(원인 불명)");
+  }
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
