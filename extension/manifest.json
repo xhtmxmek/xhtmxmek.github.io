@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Vimeo 실시간 자막 번역 (OpenAI)",
+  "version": "0.1.0",
+  "description": "Vimeo 자막(VTT)을 가져와 OpenAI로 번역하고 타임라인에 맞춰 표시합니다.",
+  "action": {
+    "default_title": "Vimeo 자막 번역",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": ["https://*.vimeo.com/*", "https://api.openai.com/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.vimeo.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
+

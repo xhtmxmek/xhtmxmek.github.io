@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vimeo 자막 번역</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        margin: 12px;
+        width: 340px;
+      }
+      .row {
+        margin: 10px 0;
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        color: #333;
+        margin-bottom: 6px;
+      }
+      input,
+      select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+      }
+      .hint {
+        font-size: 12px;
+        color: #666;
+        margin-top: 6px;
+        line-height: 1.35;
+      }
+      button {
+        width: 100%;
+        padding: 10px;
+        border: 0;
+        border-radius: 10px;
+        background: #111;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+      .status {
+        margin-top: 10px;
+        font-size: 12px;
+        white-space: pre-wrap;
+        color: #0b5;
+      }
+      .status.error {
+        color: #b00;
+      }
+      .mini {
+        font-size: 12px;
+        color: #444;
+      }
+      .divider {
+        height: 1px;
+        background: #eee;
+        margin: 12px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="mini">
+      Vimeo 페이지에서 우측 하단에 생기는 <b>번역 시작</b> 버튼을 눌러 실행합니다.
+    </div>
+    <div class="divider"></div>
+
+    <div class="row">
+      <label for="apiKey">OpenAI API Key</label>
+      <input id="apiKey" type="password" placeholder="sk-..." autocomplete="off" />
+      <div class="hint">
+        주의: 키를 확장에 저장합니다(프로토타입 용도). 가장 안전한 방식은 서버 프록시를 두는 것입니다.
+      </div>
+    </div>
+
+    <div class="row">
+      <label for="model">모델</label>
+      <input id="model" type="text" placeholder="gpt-4o-mini" />
+      <div class="hint">기본값은 <code>gpt-4o-mini</code> 입니다.</div>
+    </div>
+
+    <div class="row">
+      <label for="targetLang">번역 언어</label>
+      <select id="targetLang">
+        <option value="ko">한국어(ko)</option>
+        <option value="en">English(en)</option>
+        <option value="ja">日本語(ja)</option>
+        <option value="zh-CN">简体中文(zh-CN)</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label for="batchSize">배치 크기(한 번에 번역할 cue 수)</label>
+      <input id="batchSize" type="number" min="5" max="60" step="1" />
+    </div>
+
+    <button id="saveBtn">저장</button>
+    <div id="status" class="status"></div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
+
