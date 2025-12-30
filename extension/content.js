@@ -34,12 +34,39 @@ function ensureOverlay() {
 
   const style = createEl("style", {
     textContent: `
+      #vtt-translate-subtitle {
+        position: fixed;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 8%;
+        z-index: 2147483647;
+        max-width: min(960px, 92vw);
+        padding: 10px 14px;
+        border-radius: 14px;
+        background: rgba(0,0,0,0.55);
+        border: 1px solid rgba(255,255,255,0.14);
+        color: #fff;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        font-size: 22px;
+        font-weight: 650;
+        line-height: 1.35;
+        text-align: center;
+        text-shadow: 0 2px 6px rgba(0,0,0,0.85);
+        white-space: pre-line;
+        pointer-events: none;
+      }
+      @media (max-width: 720px) {
+        #vtt-translate-subtitle {
+          font-size: 18px;
+          bottom: 10%;
+        }
+      }
       #vtt-translate-overlay {
         position: fixed;
         right: 16px;
         bottom: 16px;
         z-index: 2147483647;
-        width: 360px;
+        width: 340px;
         color: #fff;
         font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       }
@@ -72,17 +99,6 @@ function ensureOverlay() {
       #vtt-translate-btn[disabled] {
         opacity: 0.6;
         cursor: default;
-      }
-      #vtt-translate-sub {
-        margin-top: 10px;
-        padding: 10px;
-        border-radius: 12px;
-        background: rgba(0,0,0,0.55);
-        border: 1px solid rgba(255,255,255,0.1);
-        font-size: 16px;
-        line-height: 1.35;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-        min-height: 44px;
       }
       #vtt-translate-meta {
         font-size: 12px;
@@ -120,6 +136,7 @@ function ensureOverlay() {
     `
   });
 
+  const subtitle = createEl("div", { id: "vtt-translate-subtitle", textContent: "" });
   const btn = createEl("button", { id: "vtt-translate-btn", textContent: "번역 시작" });
   const stopBtn = createEl("button", {
     className: "vtt-ghost",
@@ -141,13 +158,13 @@ function ensureOverlay() {
   const meta = createEl("div", { id: "vtt-translate-meta", textContent: "VTT 탐색 중..." });
   const bar = createEl("div", { id: "vtt-translate-progress" }, [createEl("div")]);
   const err = createEl("div", { id: "vtt-translate-error" });
-  const sub = createEl("div", { id: "vtt-translate-sub", textContent: "" });
 
   const actions = createEl("div", { id: "vtt-translate-actions" }, [stopBtn]);
   actions.style.display = "none";
 
-  const panel = createEl("div", { id: "vtt-translate-panel" }, [title, meta, bar, err, sub, actions]);
+  const panel = createEl("div", { id: "vtt-translate-panel" }, [title, meta, bar, err, actions]);
   const overlay = createEl("div", { id: "vtt-translate-overlay" }, [style, panel]);
+  document.documentElement.appendChild(subtitle);
   document.documentElement.appendChild(overlay);
 
   btn.addEventListener("click", () => void onStartClicked());
@@ -206,7 +223,7 @@ function setButtonRunning(running) {
 }
 
 function setSubtitle(text) {
-  const el = $("#vtt-translate-sub");
+  const el = $("#vtt-translate-subtitle");
   if (el) el.textContent = text || "";
 }
 
