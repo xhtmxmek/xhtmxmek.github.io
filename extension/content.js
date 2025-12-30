@@ -497,9 +497,13 @@ async function onStartClicked() {
 
 // 초기 부팅: 오버레이는 부담이어서, 영상 있는 페이지만 가볍게 준비
 function boot() {
-  // Vimeo는 SPA라서 늦게 로딩될 수 있음: overlay를 미리 만들되, 최소 UI로
-  ensureOverlay();
+  // Vimeo는 iframe(player.vimeo.com)에서 재생되는 경우가 많음.
+  // all_frames로 주입되므로, "video가 있는 프레임"에서만 UI를 띄운다.
   injectPageHookOnce();
+  const hasVideo = Boolean(getVideoEl());
+  if (!hasVideo) return;
+
+  ensureOverlay();
   discoverVttUrl()
     .then((url) => {
       if (url) setMeta("VTT 감지됨. '번역 시작'을 누르세요.");
