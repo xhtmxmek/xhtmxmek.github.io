@@ -4,6 +4,7 @@ let state = {
   translated: new Map(), // cueIndex -> translated text
   vttUrl: null,
   vttTextCaptured: null,
+  cacheId: null,
   progress: { done: 0, total: 0 },
   lastCueIndex: -1
 };
@@ -297,18 +298,46 @@ async function discoverVttUrl() {
   return null;
 }
 
-function buildCacheKey({ vttUrl, targetLang, model }) {
-  return `vttcache::${targetLang}::${model}::${vttUrl}`;
+function normalizeUrlForCache(url) {
+  if (!url) return "no-url";
+  try {
+    const u = new URL(url, location.href);
+    // Vimeo는 새로고침마다 query 토큰이 바뀌는 경우가 많아서 origin+pathname만 사용
+    return `${u.origin}${u.pathname}`;
+  } catch (_) {
+    return String(url);
+  }
 }
 
-async function loadCachedTranslation({ vttUrl, targetLang, model }) {
-  const key = buildCacheKey({ vttUrl, targetLang, model });
+async function sha256Hex(text) {
+  const enc = new TextEncoder();
+  const buf = enc.encode((text ?? "").toString());
+  const digest = await crypto.subtle.digest("SHA-256", buf);
+  const bytes = new Uint8Array(digest);
+  let hex = "";
+  for (const b of bytes) hex += b.toString(16).padStart(2, "0");
+  return hex;
+}
+
+async function computeCacheId({ vttUrl, vttText }) {
+  // URL이 매번 바뀌어도 같은 VTT면 같은 캐시를 쓰기 위해, 본문 해시 기반으로 생성
+  const urlPart = normalizeUrlForCache(vttUrl);
+  const hash = await sha256Hex(vttText);
+  return `${urlPart}::sha256:${hash}`;
+}
+
+function buildCacheKey({ cacheId, targetLang, model }) {
+  return `vttcache2::${targetLang}::${model}::${cacheId}`;
+}
+
+async function loadCachedTranslation({ cacheId, targetLang, model }) {
+  const key = buildCacheKey({ cacheId, targetLang, model });
   const res = await chrome.storage.local.get({ [key]: null });
   return res[key];
 }
 
-async function saveCachedTranslation({ vttUrl, targetLang, model, data }) {
-  const key = buildCacheKey({ vttUrl, targetLang, model });
+async function saveCachedTranslation({ cacheId, targetLang, model, data }) {
+  const key = buildCacheKey({ cacheId, targetLang, model });
   await chrome.storage.local.set({ [key]: data });
 }
 
@@ -422,6 +451,13 @@ async function onStartClicked() {
     return;
   }
 
+  // 캐시 식별자(본문 해시 기반) 계산
+  try {
+    state.cacheId = await computeCacheId({ vttUrl: state.vttUrl, vttText });
+  } catch (_) {
+    state.cacheId = null;
+  }
+
   const cues = parseVtt(vttText);
   if (!cues.length) {
     setButtonRunning(false);
@@ -434,11 +470,14 @@ async function onStartClicked() {
   setProgress(0, cues.length);
 
   // 캐시 로드
-  const cached = await loadCachedTranslation({
-    vttUrl,
-    targetLang: settings.targetLang,
-    model: settings.model
-  });
+  const cached =
+    state.cacheId
+      ? await loadCachedTranslation({
+          cacheId: state.cacheId,
+          targetLang: settings.targetLang,
+          model: settings.model
+        })
+      : null;
   if (cached?.translations && Array.isArray(cached.translations) && cached.translations.length === cues.length) {
     cached.translations.forEach((t, idx) => state.translated.set(idx, t || ""));
     state.progress.done = cues.length;
@@ -485,12 +524,14 @@ async function onStartClicked() {
 
   setMeta(`번역 완료 (${cues.length}/${cues.length})`);
   setProgress(cues.length, cues.length);
-  await saveCachedTranslation({
-    vttUrl,
-    targetLang: settings.targetLang,
-    model: settings.model,
-    data: { translations: translationsArr, savedAt: Date.now() }
-  });
+  if (state.cacheId) {
+    await saveCachedTranslation({
+      cacheId: state.cacheId,
+      targetLang: settings.targetLang,
+      model: settings.model,
+      data: { translations: translationsArr, savedAt: Date.now(), cues: cues.length }
+    });
+  }
   setButtonRunning(false);
   state.running = false;
 }
