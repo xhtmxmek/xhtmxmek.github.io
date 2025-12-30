@@ -13,6 +13,12 @@
     "service_worker": "background.js",
     "type": "module"
   },
+  "web_accessible_resources": [
+    {
+      "resources": ["pageHook.js"],
+      "matches": ["https://*.vimeo.com/*"]
+    }
+  ],
   "content_scripts": [
     {
       "matches": ["https://*.vimeo.com/*"],

@@ -3,6 +3,7 @@ let state = {
   cues: [],
   translated: new Map(), // cueIndex -> translated text
   vttUrl: null,
+  vttTextCaptured: null,
   progress: { done: 0, total: 0 },
   lastCueIndex: -1
 };
@@ -150,6 +151,31 @@ function ensureOverlay() {
 
   btn.addEventListener("click", () => void onStartClicked());
   stopBtn.addEventListener("click", () => stopAll());
+}
+
+function injectPageHookOnce() {
+  if (window.__vimeoVttHookInjected) return;
+  window.__vimeoVttHookInjected = true;
+  try {
+    const s = document.createElement("script");
+    s.src = chrome.runtime.getURL("pageHook.js");
+    s.async = false;
+    (document.documentElement || document.head).appendChild(s);
+    s.remove();
+  } catch (_) {
+    // ignore
+  }
+
+  window.addEventListener("message", (ev) => {
+    const d = ev?.data;
+    if (!d || d.__vimeoVttHook !== true) return;
+    if (d.type === "VTT_CAPTURED" && typeof d.text === "string") {
+      state.vttTextCaptured = d.text;
+      state.vttUrl = d.url || state.vttUrl;
+      const len = d.text.length;
+      setMeta(`VTT 캡처됨(${len.toLocaleString()} chars). '번역 시작'을 누르세요.`);
+    }
+  });
 }
 
 function setMeta(text) {
@@ -337,6 +363,7 @@ function stopAll() {
 
 async function onStartClicked() {
   ensureOverlay();
+  injectPageHookOnce();
   setError("");
 
   const settingsRes = await chrome.runtime.sendMessage({ type: "GET_SETTINGS" });
@@ -357,29 +384,41 @@ async function onStartClicked() {
 
   setMeta("VTT 찾는 중...");
   const vttUrl = await discoverVttUrl();
-  if (!vttUrl) {
+  // 1) DOM/HTML에서 찾았으면 그 URL로 fetch 시도
+  // 2) 못 찾았으면 페이지 훅(fetch/XHR)로 캡처된 VTT 본문을 사용(DevTools에서 보이는 케이스 대응)
+  let vttText = "";
+  if (vttUrl) {
+    state.vttUrl = vttUrl;
+    setMeta("VTT 다운로드 중...");
+    try {
+      const resp = await fetch(vttUrl);
+      if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
+      vttText = await resp.text();
+    } catch (e) {
+      // CORS 등으로 fetch가 막혔으면 캡처본으로 fallback
+      if (state.vttTextCaptured) {
+        vttText = state.vttTextCaptured;
+        setMeta("VTT 다운로드 실패 → 캡처된 VTT로 진행");
+      } else {
+        setButtonRunning(false);
+        state.running = false;
+        setError(`VTT 다운로드 실패: ${e?.message || String(e)}\nURL: ${vttUrl}`);
+        return;
+      }
+    }
+  } else if (state.vttTextCaptured) {
+    vttText = state.vttTextCaptured;
+    setMeta("캡처된 VTT로 진행");
+  } else {
     setButtonRunning(false);
     state.running = false;
     setError(
       "VTT URL을 찾지 못했습니다.\n" +
-        "- Vimeo에서 자막이 켜져 있는지 확인\n" +
-        "- 해당 영상이 실제로 VTT 자막을 제공하는지 확인\n" +
-        "- iframe 내부 플레이어라면(다른 도메인) 제한될 수 있습니다"
+        "다만 DevTools 네트워크에는 보인다고 하셨으니, 아래 순서로 다시 해보세요:\n" +
+        "1) 이 메시지가 뜬 상태에서 영상 자막(CC)을 켜거나\n" +
+        "2) 페이지를 새로고침(F5)해서 VTT 요청이 다시 발생하도록\n\n" +
+        "확장이 fetch/XHR을 가로채서 VTT를 캡처하면 'VTT 캡처됨'으로 상태가 바뀝니다."
     );
-    return;
-  }
-  state.vttUrl = vttUrl;
-
-  setMeta("VTT 다운로드 중...");
-  let vttText = "";
-  try {
-    const resp = await fetch(vttUrl);
-    if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
-    vttText = await resp.text();
-  } catch (e) {
-    setButtonRunning(false);
-    state.running = false;
-    setError(`VTT 다운로드 실패: ${e?.message || String(e)}\nURL: ${vttUrl}`);
     return;
   }
 
@@ -460,10 +499,11 @@ async function onStartClicked() {
 function boot() {
   // Vimeo는 SPA라서 늦게 로딩될 수 있음: overlay를 미리 만들되, 최소 UI로
   ensureOverlay();
+  injectPageHookOnce();
   discoverVttUrl()
     .then((url) => {
       if (url) setMeta("VTT 감지됨. '번역 시작'을 누르세요.");
-      else setMeta("VTT 미감지. 자막을 켠 뒤 다시 시도하세요.");
+      else setMeta("VTT 미감지. 자막을 켠 뒤 다시 시도하세요. (필요 시 새로고침)");
     })
     .catch(() => setMeta("VTT 탐색 실패"));
 }
